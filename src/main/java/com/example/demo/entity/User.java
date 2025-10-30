@@ -28,11 +28,9 @@ public class User {
     @Column(name = "email")
     private String email;
 
-//    @Column(name = "department_id")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     private Department department;
-//    private Long department;
 
     @Column(name = "password")
     private String password;

@@ -1,11 +1,9 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.user.UpdateUserRequest;
+import com.example.demo.dto.user.UserRequest;
 import com.example.demo.dto.user.UserResponse;
 import com.example.demo.entity.Department;
 import com.example.demo.entity.User;
-import com.example.demo.enums.Role;
-import com.example.demo.exception.DataNotFound;
 import com.example.demo.repository.DepartmentRepository;
 import com.example.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,23 +17,46 @@ public class UserService {
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
 
-    public List<UserResponse> getAllUser() {
+    public List<UserResponse> getAll() {
         return userRepository.findAll().stream().map(UserResponse::fromUser).toList();
     }
 
-    public UserResponse updateUser(UpdateUserRequest request) {
-        User user = userRepository.findById(request.getId())
-                .orElseThrow(() -> new DataNotFound("User not found"));
+    public UserResponse getById(Long id) {
+        return userRepository.findById(id)
+                .map(UserResponse::fromUser)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
 
-        user.setName(request.getName());
-        user.setRole(request.getRole());
+    public void delete(Long id) {
+        userRepository.deleteById(id);
+    }
 
-        if (user.getRole() == Role.ADMIN) {
-            return UserResponse.fromUser(userRepository.save(user));
-        }
-        Department department = departmentRepository.findById(request.getDepartmentId())
-                .orElseThrow(() -> new DataNotFound("Department not found"));
+    public void create(UserRequest userRequest) {
+
+        Department department = departmentRepository.findById(userRequest.getDepartmentId())
+                .orElseThrow(() -> new RuntimeException("Department not found"));
+
+        User user = User.builder()
+                .name(userRequest.getName())
+                .password(userRequest.getPassword())
+                .email(userRequest.getEmail())
+                .role(userRequest.getRole())
+                .active(true)
+                .department(department)
+                .build();
+        userRepository.save(user);
+    }
+
+    public void update(Long id, UserRequest userRequest) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Department department = departmentRepository.findById(userRequest.getDepartmentId())
+                .orElseThrow(() -> new RuntimeException("Department not found"));
+
+        user.setName(userRequest.getName());
+        user.setRole(userRequest.getRole());
         user.setDepartment(department);
-        return UserResponse.fromUser(userRepository.save(user));
+        userRepository.save(user);
     }
 }

@@ -6,6 +6,12 @@ spring:
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 5s
   jpa:
     hibernate:
       ddl-auto: validate
@@ -17,3 +23,14 @@ spring:
 
 jwt:
   secretKey: ${SECRET_KEY}
+
+app:
+  websocket:
+    allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:3000}
+  notification:
+    topic: ${NOTIFICATION_TOPIC:notifications}
+    evaluation:
+      lead-days: ${NOTIFICATION_EVAL_LEAD_DAYS:30}
+      cron: ${NOTIFICATION_EVAL_CRON:0 0 1 * * ?}
+      cycle-years: ${NOTIFICATION_EVAL_CYCLE_YEARS:1}
+      timezone: ${NOTIFICATION_EVAL_TIMEZONE:UTC}

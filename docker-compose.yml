@@ -1,0 +1,86 @@
+name: asset-stack
+
+services:
+  mysql-db:
+    image: ${MYSQL_IMAGE:-mysql:8.4}
+    container_name: asset-mysql
+    restart: unless-stopped
+    pull_policy: if_not_present
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD required}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-asset_management}
+      MYSQL_USER: ${DATABASE_USERNAME:-asset_app}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD:-asset_app_pw}
+    command: >
+      mysqld
+      --skip-log-bin
+      --performance-schema=off
+      --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE:-256M}
+      --innodb-log-buffer-size=${MYSQL_INNODB_LOG_BUFFER_SIZE:-32M}
+      --max-connections=${MYSQL_MAX_CONNECTIONS:-50}
+      --table-open-cache=256
+      --thread-cache-size=32
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    deploy:
+      resources:
+        reservations:
+          cpus: ${MYSQL_RESERVATION_CPUS:-0.25}
+          memory: ${MYSQL_RESERVATION_MEM:-256m}
+        limits:
+          cpus: ${MYSQL_CPUS:-0.5}
+          memory: ${MYSQL_MEM:-512m}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis-cache:
+    image: ${REDIS_IMAGE:-redis:7-alpine}
+    container_name: asset-redis
+    restart: unless-stopped
+    pull_policy: if_not_present
+    command: >
+      sh -c "if [ -n \"$${REDIS_PASSWORD}\" ];
+             then redis-server --save \"\" --appendonly ${REDIS_APPENDONLY:-no} --requirepass \"$${REDIS_PASSWORD}\";
+             else redis-server --save \"\" --appendonly ${REDIS_APPENDONLY:-no};
+             fi"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    tmpfs:
+      - /data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "[ -n \"$${REDIS_PASSWORD}\" ] && redis-cli -a \"$${REDIS_PASSWORD}\" ping || redis-cli ping"
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        reservations:
+          cpus: ${REDIS_RESERVATION_CPUS:-0.1}
+          memory: ${REDIS_RESERVATION_MEM:-128m}
+        limits:
+          cpus: ${REDIS_CPUS:-0.25}
+          memory: ${REDIS_MEM:-256m}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+volumes:
+  mysql_data:
